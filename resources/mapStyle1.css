@@ -81,7 +81,7 @@ h1, p {
   stroke: #333;
 }
 .cameraBestCell {
-  fill: none;  
+  fill: none;
 }
 #label {
   position: fixed;
@@ -143,6 +143,7 @@ h1, p {
   text-align: center;
   padding: 2px 4px;
   max-width: 150px;
+  border-radius: 4px;
   opacity: 0;
 }
 #tip h1 {
@@ -176,6 +177,5 @@ h1, p {
   }
   #footer {
     font-size: .8rem;
-    margin-top: 1rem;
   }
 }
