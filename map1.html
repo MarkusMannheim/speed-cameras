@@ -158,6 +158,10 @@
             key.transition()
                 .delay(5000)
                 .style("opacity", 1);
+            camerasBest.selectAll(".cameraBestCell")
+              .transition()
+                .delay(5000)
+                .style("pointer-events", "all");
           }, 500);
         });
 

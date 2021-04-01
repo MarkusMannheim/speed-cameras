@@ -81,8 +81,7 @@ h1, p {
   stroke: #333;
 }
 .cameraBestCell {
-  fill: none;
-  pointer-events: all;
+  fill: none;  
 }
 #label {
   position: fixed;
