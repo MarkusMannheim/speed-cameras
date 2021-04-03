@@ -112,7 +112,7 @@
           .attr("x", 0)
           .transition()
             .duration(1000)
-            .attr("x", (width - margin.left - margin.right) / 2 + margin.left);
+            .attr("x", width - margin.right);
         yAxisGroup.select(".label")
           .attr("y", height - margin.bottom)
           .transition()
@@ -226,6 +226,10 @@
           .attr("x", 0)
           .attr("y", margin.top - 10);
         ticker.style("bottom", function() { return (document.getElementById("container").getBoundingClientRect().height - height + margin.bottom + 16) + "px"; });
+        xAxisGroup.select(".label")
+          .attr("x", width - margin.right);
+        yAxisGroup.select(".label")
+          .attr("y", margin.top - 10);
     }
     </script>
   </body>

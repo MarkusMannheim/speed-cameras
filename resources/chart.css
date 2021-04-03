@@ -114,6 +114,7 @@ h1, p {
   fill: #333;
   font-weight: bold;
   font-size: .8rem;
+  text-anchor: end;
 }
 #yAxisGroup .label {
   text-anchor: start;
