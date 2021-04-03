@@ -52,9 +52,9 @@ h1, p {
 }
 #chart {
   height: 100%;
+  opacity: 0;
 }
 #chartGroup {
-  opacity: 0;
 }
 #title {
   text-align: right;
@@ -65,6 +65,15 @@ h1, p {
   font-size: .9rem;
   color: #01CFFF;
   padding: 2px 4px;
+}
+#title::after {
+  content: "CURRENT APPROACH";
+}
+#title.selected::after {
+  content: "REVENUE MODEL"
+}
+#title.selected {
+  color: #F75F00;
 }
 #instruction {
   font-family: "ABCSans Black", "Arial Black", sans-serif;
@@ -87,6 +96,46 @@ h1, p {
   color: #666;
   margin-top: .5rem;
 }
+.axis {
+  opacity: 0;
+}
+.axis .domain {
+  stroke: none;
+}
+.axis .tick line {
+  stroke: #999;
+  stroke-dasharray: 3 2;
+}
+.axis .tick text {
+  fill: #666;
+  font-size: .75rem;
+}
+.axis .label {
+  fill: #333;
+  font-weight: bold;
+  font-size: .8rem;
+}
+#yAxisGroup .label {
+  text-anchor: start;
+}
+.camera {
+  fill: #009CBF;
+  opacity: 0;
+}
+#ticker {
+  position: absolute;
+  right: 1rem;
+  text-align: right;
+  opacity: 0;
+}
+#count {
+  font-family: "ABCSans Black", "Arial Black", sans-serif;
+  font-size: 1.25rem;
+  color: #00A388;
+}
+#ticker p {
+  font-size: .8rem;
+}
 @media only screen and (min-width: 500px) {
   #title {
     font-size: 1.1rem;
@@ -99,4 +148,17 @@ h1, p {
   #footer {
     font-size: .8rem;
   }
+  .axis .tick text {
+    font-size: .8rem;
+  }
+  .axis .label {
+    font-size: .85rem;
+  }
+  #count {
+    font-size: 1.5rem;
+  }
+  #ticker p {
+    font-size: .85rem;
+  }
+
 }

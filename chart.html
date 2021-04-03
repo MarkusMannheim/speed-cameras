@@ -24,21 +24,38 @@
     <!-- initial layout -->
     <div id="container">
       <svg id="chart">
+        <g id="axisGroup">
+          <g class="axis" id="xAxisGroup">
+            <text class="label">hours per year deployed at site</text>
+          </g>
+          <g class="axis" id="yAxisGroup">
+            <text class="label">effectiveness (fines per hour)</text>
+          </g>
+        </g>
         <g id="chartGroup"></g>
       </svg>
-      <div id="title">ALL MOBILE CAMERA SITES</div>
-      <div id="instruction" onmouseover="instructionOff()">hover mouse or touch for details</div>
+      <div id="title"></div>
+      <div id="ticker">
+        <h1 id="count">$0</h1>
+        <p>FINES PER YEAR</p>
+      </div>
+      <div id="instruction">There's no relationship between where cameras are sent and how many fines are issued ...</div>
       <div id="tip"></div>
-      <div id="footer">Includes all mobile camera locations active between Feb 2017 and Feb 2020. Data: Transport Canberra</div>
+      <div id="footer">Based on all mobile camera use from Feb 2017 to Feb 2020. Data: Transport Canberra, ABC Canberra</div>
     </div>
     <script>
       // name page elements
       container = d3.select("#container");
       chart = d3.select("#chart");
       chartGroup = d3.select("#chartGroup");
+      axisGroup = d3.select("#axisGroup");
+      xAxisGroup = d3.select("#xAxisGroup");
+      yAxisGroup = d3.select("#yAxisGroup");
       title = d3.select("#title");
       instruction = d3.select("#instruction");
       footer = d3.select("#footer");
+      ticker = d3.select("#ticker");
+      count = d3.select("#count");
       // load data
       d3.csv("./data/camerasChart.csv").then(function(data) {
           // format data
@@ -50,6 +67,7 @@
                 newDuration: +d.new_duration
               };
             });
+          d3.shuffle(chartData);
           // resize function
           window.addEventListener("resize", resize);
           // launch
@@ -57,98 +75,158 @@
             prepareChart();
             resize();
             // fade in
-            chartGroup.transition()
+            chart.transition()
               .duration(500)
-              .style("opacity", 1);
+              .style("opacity", 1)
+              .on("end", setup);
           }, 500);
         });
 
+      function setup() {
+        x.range([margin.left, margin.left]);
+        y.range([height - margin.bottom, height - margin.bottom]);
+        xAxis.tickSizeInner(0);
+        yAxis.tickSizeInner(0);
+        xAxisGroup.call(xAxis);
+        yAxisGroup.call(yAxis);
+        x.range([margin.left, width - margin.right]);
+        y.range([height - margin.bottom, margin.top]);
+        xAxis.tickSizeInner(margin.top + margin.bottom - height);
+        yAxis.tickSizeInner(margin.left + margin.right - width);
+        xAxisGroup.transition()
+          .duration(1000)
+          .style("opacity", 1)
+          .call(xAxis);
+        yAxisGroup.transition()
+          .duration(1000)
+          .style("opacity", 1)
+          .call(yAxis);
+        cameras.attr("cy", 0)
+          .attr("cx", function(d) { return x(d.duration); })
+          .transition()
+            .duration(1000)
+            .delay(function(d, i) { return i * 1000 / chartData.length + 1000; })
+            .style("opacity", .25)
+            .attr("cy", function(d) { return y(d.productivity); });
+        xAxisGroup.select(".label")
+          .attr("x", 0)
+          .transition()
+            .duration(1000)
+            .attr("x", (width - margin.left - margin.right) / 2 + margin.left);
+        yAxisGroup.select(".label")
+          .attr("y", height - margin.bottom)
+          .transition()
+            .duration(1000)
+            .attr("y", margin.top - 10);
+        ticker.transition()
+          .delay(1000)
+          .duration(1000)
+          .style("opacity", 1);
+        count.transition()
+          .delay(1000)
+          .duration(2000)
+          .textTween(function() {
+            let i = d3.interpolate(0, 11248468.7280464);
+            return function(t) {
+              return d3.format("$,.0f")(i(t));
+            };
+          });
+        instruction.transition()
+          .delay(5000)
+          .duration(1000)
+          .style("opacity", 1)
+        .transition()
+          .delay(3000)
+          .duration(1000)
+          .style("opacity", 0)
+        .transition()
+          .text("But if cameras were deployed to raise revenue ...")
+          .delay(1000)
+          .duration(1000)
+          .style("opacity", 1)
+        .transition()
+          .delay(3000)
+          .duration(1000)
+          .style("opacity", 0)
+          .on("end", function() {
+            d3.timeout(transitionLoop, 1000);
+          });
+      }
+
+      function transitionLoop() {
+        function switchTitle(toggle) {
+          title.classed("selected", toggle);
+          count.transition()
+            .duration(2000)
+            .textTween(function() {
+              let i = toggle ?
+                d3.interpolate(11248468.7280464, 19371706.229320146) :
+                d3.interpolate(19371706.229320146, 11248468.7280464);
+              return function(t) {
+                return d3.format("$,.0f")(i(t));
+              };
+            });
+        }
+        switchTitle(true);
+        d3.timeout(function() {
+          switchTitle(false);
+        }, 5000);
+        cameras.transition()
+          .duration(1000)
+          .delay(function(d, i) { return i * 1000 / chartData.length; })
+          .attr("cx", function(d) { return x(d.newDuration); })
+        .transition()
+          .delay(4000)
+          .duration(1000)
+          .attr("cx", function(d) { return x(d.duration); });
+        d3.timeout(transitionLoop, 10000);
+      }
+
       function prepareChart() {
         // chart functions
-        projection = d3.geoConicEqualArea()
-          .parallels([-26.29, -44.29])
-          .rotate([-149.13, 0]);
-        path = d3.geoPath()
-          .projection(projection);
+        x = d3.scaleLinear()
+          .domain([0, 180]);
+        y = d3.scaleLinear()
+          .domain([0, 16]);
+        xAxis = d3.axisBottom(x)
+          .ticks(5)
+          .tickSizeOuter(0)
+          .tickPadding(8);
+        yAxis = d3.axisLeft(y)
+          .ticks(5)
+          .tickSizeOuter(0)
+          .tickPadding(8);
         // plot cameras
-        suburbs.selectAll(".suburb")
-            .data(suburbData.features)
-          .enter().append("path")
-            .classed("suburb", true);
-        border.datum(borderData)
-          .classed("border", true);
-        water.datum(waterData)
-          .classed("water", true);
-        camerasAll.selectAll(".cameraAll")
-            .data(cameraAllData.features)
-          .enter().append("path")
-            .classed("cameraAll", true);
-        camerasBest.selectAll(".cameraBest")
-            .data(cameraBestData.features)
-          .enter().append("g")
-            .classed("cameraBest", true)
-            .append("path")
-              .classed("cameraBestPoint", true);
-        camerasBest.selectAll(".cameraBest")
-          .append("path")
-            .classed("cameraBestCall", true);
-        camerasBest.selectAll(".cameraBest")
-          .append("path")
-            .classed("cameraBestCell", true)
-            .on("mouseover", hoverOver)
-            .on("mouseout", hoverOut);
+        cameras = chartGroup
+          .selectAll(".camera")
+            .data(chartData)
+          .enter().append("circle")
+            .classed("camera", true);
       }
       function resize() {
-        dimensions = document.getElementById("map").getBoundingClientRect();
+        dimensions = document.getElementById("chart").getBoundingClientRect();
         width = dimensions.width;
         height = dimensions.height;
-        projection.fitExtent([[15, 30], [width - 15, height - 15]], cameraBestData);
-        delaunay = d3.Delaunay
-          .from(cameraBestData.features,
-            function(d) {
-              return projection(d.geometry.coordinates)[0];
-            },
-            function(d) {
-              return projection(d.geometry.coordinates)[1];
-            });
-        voronoi = delaunay.voronoi([0, 0, width, height]);
-        path.pointRadius(function() { return width < 500 ? 3 : 4; });
-        mapGroup.selectAll(".border, .suburb, .water, .cameraAll, .cameraBestPoint")
-          .attr("d", path);
-        camerasBest.selectAll(".cameraBestCell")
-          .attr("d", function(d, i) { return voronoi.renderCell(i); });
-      }
-      function hoverOver(event, d) {
-        instruction.style("opacity", 0);
-        d3.select(this.parentNode)
-          .raise()
-          .select(".cameraBestPoint")
-            .classed("selected", true);
-        tip.style("opacity", 0)
-          .html("<h1>" + d.properties.desc + "</h1>"
-              + "<p>avg. fines/hr: <span>" + d3.format(".1f")(d.properties.productivity) + "</span></p>");
-        let tipWidth = document.getElementById("tip").getBoundingClientRect().width;
-        let tipHeight = document.getElementById("tip").getBoundingClientRect().height;
-        let centroid = projection(d.geometry.coordinates);
-        tip.style("top", function() {
-            return centroid[1] + tipHeight + 20 > height ?
-              (centroid[1] - tipHeight - 10) + "px" :
-              (centroid[1] + 10) + "px";
-          })
-          .style("left", function() {
-            return centroid[0] - tipWidth / 2 - 10 < 0 ?
-              "10px" :
-              centroid[0] + tipWidth / 2 + 10 > width ?
-              (width - tipWidth - 10) + "px" :
-              (centroid[0] - tipWidth / 2) + "px";
-          });
-        tip.style("opacity", 1);
-      }
-      function hoverOut() {
-        d3.selectAll(".cameraBestPoint")
-          .classed("selected", false);
-        tip.style("opacity", 0);
-      }
+        margin = { top: 40, right: 10, bottom: 40, left: 20 };
+        x.range([margin.left, width - margin.right]);
+        y.range([height - margin.bottom, margin.top]);
+        xAxis.tickSizeInner(margin.top + margin.bottom - height);
+        yAxis.tickSizeInner(margin.left + margin.right - width);
+        cameras.attr("r", function() {
+          return width < 500 ? 3 : 4;
+        });
+        xAxisGroup.attr("transform", "translate(0, " + (height - margin.bottom) + ")")
+          .call(xAxis);
+        yAxisGroup.attr("transform", "translate(" + margin.left + ", 0)")
+          .call(yAxis);
+        xAxisGroup.select(".label")
+          .attr("x", (width - margin.left - margin.right) / 2 + margin.left)
+          .attr("y", 35);
+        yAxisGroup.select(".label")
+          .attr("x", 0)
+          .attr("y", margin.top - 10);
+        ticker.style("bottom", function() { return (document.getElementById("container").getBoundingClientRect().height - height + margin.bottom + 16) + "px"; });
+    }
     </script>
   </body>
 </html>
