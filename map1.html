@@ -33,10 +33,8 @@
           <g id="camerasBest"></g>
         </g>
       </svg>
-      <div id="label">
-        <div id="title">ALL MOBILE CAMERA SITES</div>
-        <div id="instruction">hover over or touch <br><span>sites</span> for details</div>
-      </div>
+      <div id="title">ALL MOBILE CAMERA SITES</div>
+      <div id="instruction" onmouseover="instructionOff()">hover over or touch <br><span>sites</span> for details</div>
       <div id="key">
         <div class="key">
           <div>mobile camera location</div>
@@ -60,7 +58,6 @@
       water = d3.select("#water");
       camerasAll = d3.select("#camerasAll");
       camerasBest = d3.select("#camerasBest");
-      label = d3.select("#label");
       title = d3.select("#title");
       instruction = d3.select("#instruction");
       key = d3.select("#key");
@@ -127,17 +124,26 @@
             camerasAll.selectAll(".cameraAll")
               .transition()
                 .duration(1)
-                .delay(function(d, i) { return i * 1000 / cameraAllData.features.length + 1000; })
+                .delay(function(d, i) { return i * 500 / cameraAllData.features.length + 1000; })
                 .style("opacity", .75)
               .transition()
-                .duration(1000)
-                .delay(2000)
+                .delay(3000)
                 .style("opacity", .25);
             camerasBest.selectAll(".cameraBestPoint")
               .transition()
                 .duration(1)
-                .delay(function(d, i) { return i * 1000 / cameraBestData.features.length + 5000; })
-                .style("opacity", 1);
+                .delay(function(d, i) { return i * 500 / cameraBestData.features.length + 6000; })
+                .style("opacity", 1)
+                .attr("d", function(d) {
+                  let pointRadius = width < 500 ? 4.5 : 6;
+                  return path.pointRadius(pointRadius)(d);
+                })
+              .transition()
+                .duration(2500)
+                .attr("d", function(d) {
+                  let pointRadius = width < 500 ? 3 : 4;
+                  return path.pointRadius(pointRadius)(d);
+                });
             title.transition()
                 .duration(1)
                 .delay(5000)
@@ -221,6 +227,7 @@
           .attr("d", function(d, i) { return voronoi.renderCell(i); });
       }
       function hoverOver(event, d) {
+        instruction.style("opacity", 0);
         d3.select(this.parentNode)
           .raise()
           .select(".cameraBestPoint")

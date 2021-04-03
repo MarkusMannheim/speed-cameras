@@ -83,12 +83,10 @@ h1, p {
 .cameraBestCell {
   fill: none;
 }
-#label {
+#title {
+  text-align: right;
   position: fixed;
   right: 0;
-  text-align: right;
-}
-#title {
   background: #333;
   font-family: "ABCSans Black", "Arial Black", sans-serif;
   font-size: .9rem;
@@ -96,9 +94,18 @@ h1, p {
   padding: 2px 4px;
 }
 #instruction {
-  font-size: .8rem;
-  margin-top: .5rem;
+  font-family: "ABCSans Black", "Arial Black", sans-serif;
+  font-size: 1.1rem;
+  text-align: center;
+  background: #e6e6e6;
   opacity: 0;
+  position: absolute;
+  border-radius: 4px;
+  padding: .5rem;
+  box-shadow: 2px 2px 5px #666;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 #instruction span {
   font-weight: bold;
@@ -164,8 +171,7 @@ h1, p {
     padding: 3px 6px;
   }
   #instruction {
-    margin-top: 1rem;
-    font-size: .9rem;
+
   }
   .key {
     font-size: .85rem;
