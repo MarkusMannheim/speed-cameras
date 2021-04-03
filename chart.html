@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-155991615-1"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag("js", new Date());
+      gtag("config", "UA-155991615-1");
+    </script>
+    <!-- my stuff -->
+    <meta charset="utf-8">
+    <title>ACT speed camera revenue</title>
+    <meta name="description" content="Alternative deployment of mobile speed cameras in Canberra.">
+    <meta name="keywords" content="act, canberra, mobile, speed, cameras, camera, traffic, speeding, money, revenue">
+    <meta name="author" content="Markus Mannheim">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <link href="./resources/chart.css" rel="stylesheet">
+    <link href="./resources/abcLogo64.png" rel="icon">
+  </head>
+  <body>
+    <!-- initial layout -->
+    <div id="container">
+      <svg id="chart">
+        <g id="chartGroup"></g>
+      </svg>
+      <div id="title">ALL MOBILE CAMERA SITES</div>
+      <div id="instruction" onmouseover="instructionOff()">hover mouse or touch for details</div>
+      <div id="tip"></div>
+      <div id="footer">Includes all mobile camera locations active between Feb 2017 and Feb 2020. Data: Transport Canberra</div>
+    </div>
+    <script>
+      // name page elements
+      container = d3.select("#container");
+      chart = d3.select("#chart");
+      chartGroup = d3.select("#chartGroup");
+      title = d3.select("#title");
+      instruction = d3.select("#instruction");
+      footer = d3.select("#footer");
+      // load data
+      d3.csv("./data/camerasChart.csv").then(function(data) {
+          // format data
+          chartData = data
+            .map(function(d) {
+              return {
+                duration: +d.duration,
+                productivity: +d.productivity_fines,
+                newDuration: +d.new_duration
+              };
+            });
+          // resize function
+          window.addEventListener("resize", resize);
+          // launch
+          d3.timeout(function() {
+            prepareChart();
+            resize();
+            // fade in
+            chartGroup.transition()
+              .duration(500)
+              .style("opacity", 1);
+          }, 500);
+        });
+
+      function prepareChart() {
+        // chart functions
+        projection = d3.geoConicEqualArea()
+          .parallels([-26.29, -44.29])
+          .rotate([-149.13, 0]);
+        path = d3.geoPath()
+          .projection(projection);
+        // plot cameras
+        suburbs.selectAll(".suburb")
+            .data(suburbData.features)
+          .enter().append("path")
+            .classed("suburb", true);
+        border.datum(borderData)
+          .classed("border", true);
+        water.datum(waterData)
+          .classed("water", true);
+        camerasAll.selectAll(".cameraAll")
+            .data(cameraAllData.features)
+          .enter().append("path")
+            .classed("cameraAll", true);
+        camerasBest.selectAll(".cameraBest")
+            .data(cameraBestData.features)
+          .enter().append("g")
+            .classed("cameraBest", true)
+            .append("path")
+              .classed("cameraBestPoint", true);
+        camerasBest.selectAll(".cameraBest")
+          .append("path")
+            .classed("cameraBestCall", true);
+        camerasBest.selectAll(".cameraBest")
+          .append("path")
+            .classed("cameraBestCell", true)
+            .on("mouseover", hoverOver)
+            .on("mouseout", hoverOut);
+      }
+      function resize() {
+        dimensions = document.getElementById("map").getBoundingClientRect();
+        width = dimensions.width;
+        height = dimensions.height;
+        projection.fitExtent([[15, 30], [width - 15, height - 15]], cameraBestData);
+        delaunay = d3.Delaunay
+          .from(cameraBestData.features,
+            function(d) {
+              return projection(d.geometry.coordinates)[0];
+            },
+            function(d) {
+              return projection(d.geometry.coordinates)[1];
+            });
+        voronoi = delaunay.voronoi([0, 0, width, height]);
+        path.pointRadius(function() { return width < 500 ? 3 : 4; });
+        mapGroup.selectAll(".border, .suburb, .water, .cameraAll, .cameraBestPoint")
+          .attr("d", path);
+        camerasBest.selectAll(".cameraBestCell")
+          .attr("d", function(d, i) { return voronoi.renderCell(i); });
+      }
+      function hoverOver(event, d) {
+        instruction.style("opacity", 0);
+        d3.select(this.parentNode)
+          .raise()
+          .select(".cameraBestPoint")
+            .classed("selected", true);
+        tip.style("opacity", 0)
+          .html("<h1>" + d.properties.desc + "</h1>"
+              + "<p>avg. fines/hr: <span>" + d3.format(".1f")(d.properties.productivity) + "</span></p>");
+        let tipWidth = document.getElementById("tip").getBoundingClientRect().width;
+        let tipHeight = document.getElementById("tip").getBoundingClientRect().height;
+        let centroid = projection(d.geometry.coordinates);
+        tip.style("top", function() {
+            return centroid[1] + tipHeight + 20 > height ?
+              (centroid[1] - tipHeight - 10) + "px" :
+              (centroid[1] + 10) + "px";
+          })
+          .style("left", function() {
+            return centroid[0] - tipWidth / 2 - 10 < 0 ?
+              "10px" :
+              centroid[0] + tipWidth / 2 + 10 > width ?
+              (width - tipWidth - 10) + "px" :
+              (centroid[0] - tipWidth / 2) + "px";
+          });
+        tip.style("opacity", 1);
+      }
+      function hoverOut() {
+        d3.selectAll(".cameraBestPoint")
+          .classed("selected", false);
+        tip.style("opacity", 0);
+      }
+    </script>
+  </body>
+</html>

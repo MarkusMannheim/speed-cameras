@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-155991615-1"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag("js", new Date());
+      gtag("config", "UA-155991615-1");
+    </script>
+    <!-- my stuff -->
+    <meta charset="utf-8">
+    <title>ACT mobile speed cameras</title>
+    <meta name="description" content="The locations of mobile speed cameras in Canberra.">
+    <meta name="keywords" content="act, canberra, mobile, speed, cameras, camera, traffic, speeding, vehicles, police">
+    <meta name="author" content="Markus Mannheim">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <script src="https://d3js.org/topojson.v3.min.js"></script>
+    <link href="./resources/map.css" rel="stylesheet">
+    <link href="./resources/abcLogo64.png" rel="icon">
+  </head>
+  <body>
+    <!-- initial layout -->
+    <div id="container">
+      <svg id="map">
+        <g id="mapGroup">
+          <path id="border"></path>
+          <g id="suburbs"></g>
+          <path id="water"></path>
+          <g id="camerasAll"></g>
+          <g id="camerasBest"></g>
+        </g>
+      </svg>
+      <div id="title">ALL MOBILE CAMERA SITES</div>
+      <div id="instruction" onmouseover="instructionOff()">hover mouse or touch for details</div>
+      <div id="key">
+        <div class="key">
+          <div>mobile camera location</div>
+          <div></div>
+        </div>
+        <div class="key">
+          <div>high-revenue location</div>
+          <div></div>
+        </div>
+      </div>
+      <div id="tip"></div>
+      <div id="footer">Includes all mobile camera locations active between Feb 2017 and Feb 2020. Data: Transport Canberra</div>
+    </div>
+    <script>
+      // name page elements
+      container = d3.select("#container");
+      map = d3.select("#map");
+      mapGroup = d3.select("#mapGroup");
+      border = d3.select("#border");
+      suburbs = d3.select("#suburbs");
+      water = d3.select("#water");
+      camerasAll = d3.select("#camerasAll");
+      camerasBest = d3.select("#camerasBest");
+      title = d3.select("#title");
+      instruction = d3.select("#instruction");
+      key = d3.select("#key");
+      tip = d3.select("#tip");
+      footer = d3.select("#footer");
+      // load data
+      Promise.all([
+        d3.json("./data/border.topojson"),
+        d3.json("./data/suburbs.topojson"),
+        d3.json("./data/mesh.topojson"),
+        d3.csv("./data/camerasAll.csv"),
+        d3.csv("./data/camerasBest.csv")
+      ]).then(function(data) {
+          // format data
+          borderData = topojson.feature(data[0], data[0].objects.areas);
+          suburbData = topojson.feature(data[1], data[1].objects.areas);
+          waterData = topojson.feature(data[2], data[2].objects.areas);
+          data[3] = data[3].map(function(d) {
+            return {
+              lat: (+d.lat< -100 ? +d.lat / 1000000: +d.lat),
+              lng: +d.lng
+            };
+          });
+          cameraAllData = {
+            type: "FeatureCollection",
+            features: data[3]
+              .map(function(d) {
+                return {
+                  type: "Feature",
+                  geometry: {
+                    type: "Point",
+                    coordinates: [d.lng, d.lat]
+                  }
+                };
+              })
+          };
+          cameraBestData = {
+            type: "FeatureCollection",
+            features: data[4]
+              .map(function(d) {
+                return {
+                  type: "Feature",
+                  geometry: {
+                    type: "Point",
+                    coordinates: [d.lng, d.lat]
+                  },
+                  properties: {
+                    desc: d.desc,
+                    productivity: +d.productivity_fines
+                  }
+                };
+              })
+          };
+          // resize function
+          window.addEventListener("resize", resize);
+          // launch
+          d3.timeout(function() {
+            prepareMap();
+            resize();
+            // fade in
+            mapGroup.transition()
+              .duration(500)
+              .style("opacity", 1);
+            camerasAll.selectAll(".cameraAll")
+              .transition()
+                .duration(1)
+                .delay(function(d, i) { return i * 500 / cameraAllData.features.length + 1000; })
+                .style("opacity", .75)
+              .transition()
+                .delay(3000)
+                .style("opacity", .25);
+            camerasBest.selectAll(".cameraBestPoint")
+              .transition()
+                .duration(1)
+                .delay(function(d, i) { return i * 500 / cameraBestData.features.length + 6000; })
+                .style("opacity", 1)
+                .attr("d", function(d) {
+                  let pointRadius = width < 500 ? 4.5 : 6;
+                  return path.pointRadius(pointRadius)(d);
+                })
+              .transition()
+                .duration(2500)
+                .attr("d", function(d) {
+                  let pointRadius = width < 500 ? 3 : 4;
+                  return path.pointRadius(pointRadius)(d);
+                });
+            title.transition()
+                .duration(1)
+                .delay(5000)
+                .text("TOP 50 REVENUE SITES")
+                .style("color", "#FF6100")
+              .transition()
+                .delay(2000)
+                .duration(2000)
+                .style("color", "white");
+            instruction.transition()
+                .duration(1000)
+                .delay(9000)
+                .style("opacity", 1)
+              .transition()
+                .delay(3000)
+                .duration(1000)
+                .style("opacity", 0);
+            key.transition()
+                .delay(5000)
+                .style("opacity", 1);
+            camerasBest.selectAll(".cameraBestCell")
+              .transition()
+                .delay(5000)
+                .style("pointer-events", "all");
+          }, 500);
+        });
+
+      function prepareMap() {
+        // map functions
+        projection = d3.geoConicEqualArea()
+          .parallels([-26.29, -44.29])
+          .rotate([-149.13, 0]);
+        path = d3.geoPath()
+          .projection(projection);
+        // plot paths
+        suburbs.selectAll(".suburb")
+            .data(suburbData.features)
+          .enter().append("path")
+            .classed("suburb", true);
+        border.datum(borderData)
+          .classed("border", true);
+        water.datum(waterData)
+          .classed("water", true);
+        camerasAll.selectAll(".cameraAll")
+            .data(cameraAllData.features)
+          .enter().append("path")
+            .classed("cameraAll", true);
+        camerasBest.selectAll(".cameraBest")
+            .data(cameraBestData.features)
+          .enter().append("g")
+            .classed("cameraBest", true)
+            .append("path")
+              .classed("cameraBestPoint", true);
+        camerasBest.selectAll(".cameraBest")
+          .append("path")
+            .classed("cameraBestCall", true);
+        camerasBest.selectAll(".cameraBest")
+          .append("path")
+            .classed("cameraBestCell", true)
+            .on("mouseover", hoverOver)
+            .on("mouseout", hoverOut);
+      }
+      function resize() {
+        dimensions = document.getElementById("map").getBoundingClientRect();
+        width = dimensions.width;
+        height = dimensions.height;
+        projection.fitExtent([[15, 30], [width - 15, height - 15]], cameraBestData);
+        delaunay = d3.Delaunay
+          .from(cameraBestData.features,
+            function(d) {
+              return projection(d.geometry.coordinates)[0];
+            },
+            function(d) {
+              return projection(d.geometry.coordinates)[1];
+            });
+        voronoi = delaunay.voronoi([0, 0, width, height]);
+        path.pointRadius(function() { return width < 500 ? 3 : 4; });
+        mapGroup.selectAll(".border, .suburb, .water, .cameraAll, .cameraBestPoint")
+          .attr("d", path);
+        camerasBest.selectAll(".cameraBestCell")
+          .attr("d", function(d, i) { return voronoi.renderCell(i); });
+      }
+      function hoverOver(event, d) {
+        instruction.style("opacity", 0);
+        d3.select(this.parentNode)
+          .raise()
+          .select(".cameraBestPoint")
+            .classed("selected", true);
+        tip.style("opacity", 0)
+          .html("<h1>" + d.properties.desc + "</h1>"
+              + "<p>avg. fines/hr: <span>" + d3.format(".1f")(d.properties.productivity) + "</span></p>");
+        let tipWidth = document.getElementById("tip").getBoundingClientRect().width;
+        let tipHeight = document.getElementById("tip").getBoundingClientRect().height;
+        let centroid = projection(d.geometry.coordinates);
+        tip.style("top", function() {
+            return centroid[1] + tipHeight + 20 > height ?
+              (centroid[1] - tipHeight - 10) + "px" :
+              (centroid[1] + 10) + "px";
+          })
+          .style("left", function() {
+            return centroid[0] - tipWidth / 2 - 10 < 0 ?
+              "10px" :
+              centroid[0] + tipWidth / 2 + 10 > width ?
+              (width - tipWidth - 10) + "px" :
+              (centroid[0] - tipWidth / 2) + "px";
+          });
+        tip.style("opacity", 1);
+      }
+      function hoverOut() {
+        d3.selectAll(".cameraBestPoint")
+          .classed("selected", false);
+        tip.style("opacity", 0);
+      }
+    </script>
+  </body>
+</html>
