@@ -112,7 +112,7 @@
           .attr("x", 0)
           .transition()
             .duration(1000)
-            .attr("x", width - margin.right);
+            .attr("x", (width - margin.left - margin.right) / 2 + margin.left);
         yAxisGroup.select(".label")
           .attr("y", height - margin.bottom)
           .transition()

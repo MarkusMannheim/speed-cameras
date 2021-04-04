@@ -70,7 +70,7 @@ h1, p {
   content: "CURRENT APPROACH";
 }
 #title.selected::after {
-  content: "'REVENUE-RAISING' APPROACH"
+  content: "REVENUE APPROACH"
 }
 #title.selected {
   color: #F75F00;
@@ -114,7 +114,7 @@ h1, p {
   fill: #333;
   font-weight: bold;
   font-size: .8rem;
-  text-anchor: end;
+  text-anchor: middle;
 }
 #yAxisGroup .label {
   text-anchor: start;
